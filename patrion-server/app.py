@@ -12,6 +12,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_jwt_extended import (JWTManager, get_jwt_identity, jwt_required, create_access_token)
 
+from datetime import datetime, timedelta
+
+
 app = Flask(__name__)
 CORS(app)
 
@@ -82,11 +85,19 @@ def add_post():
 
     current_user = get_jwt_identity()
 
-    print("istek geldi")
-
     if _title and _intro and _body and request.method == 'POST':
+        current_time = datetime.utcnow()
+        new_creation_date = current_time + timedelta(hours=3)
 
-        id = mongo.db.post.insert_one({'ownerId':current_user,'title':_title,'intro':_intro,'body':_body})
+        post = {
+            'ownerId': current_user,
+            'title': _title,
+            'intro': _intro,
+            'body': _body,
+            'creation_date': new_creation_date.strftime('%Y-%m-%dT%H:%M:%S.%f%z')  # Format the creation date
+        }
+
+        id = mongo.db.post.insert_one(post)
 
         resp = jsonify("Post added succesfully")
 
@@ -106,9 +117,27 @@ def users():
 
 @app.route('/posts', methods=['GET'])
 @jwt_required()
-def posts():    
-    posts = mongo.db.post.find()
-    resp = dumps(posts)
+def posts():   
+
+    posts = list(mongo.db.post.find())
+    posts_with_owner_info = []
+
+    for post in posts:
+        owner_id = post.get('ownerId')  
+        owner = mongo.db.user.find_one({'_id': ObjectId(owner_id)})  
+
+        # If owner is found, add owner information to the post
+        if owner:
+            post['owner_info'] = {
+                'name': owner.get('name'),
+                'email': owner.get('email'),
+            }
+        else:
+            post['owner_info'] = None
+
+        posts_with_owner_info.append(post)
+
+    resp = dumps(posts_with_owner_info)
     return resp
 
 
@@ -162,10 +191,10 @@ def update_user(id):
     else:
         return not_found()
 
-
-@app.route('/update-post/<id>',methods=['PUT'])
+@app.route('/update-post/<id>', methods=['PUT'])
 @jwt_required()
 def update_post(id):
+    print("istek geldi ",id)
     _id = id
     _json = request.json
     _title = _json['title']
@@ -174,9 +203,25 @@ def update_post(id):
     current_user = get_jwt_identity()
 
     if _title and _intro and _body and _id and request.method == 'PUT':
-        mongo.db.post.update_one({'$set':{'title':_title,'intro':_intro,'body':_body}})
-        resp = jsonify("Post update succesfully")
+        current_time = datetime.utcnow()
+        new_creation_date = current_time + timedelta(hours=3)
+
+        # You should also update the 'creation_date' field
+        mongo.db.post.update_one(
+            {'_id': ObjectId(_id)},
+            {
+                '$set': {
+                    'title': _title,
+                    'intro': _intro,
+                    'body': _body,
+                    'creation_date': new_creation_date.strftime('%Y-%m-%dT%H:%M:%S.%f%z')
+                }
+            }
+        )
+
+        resp = jsonify("Post updated successfully")
         resp.status_code = 200
+
         return resp
     else:
         return not_found()
