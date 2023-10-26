@@ -1,38 +1,64 @@
-import React from "react";
-import { loginUser} from '../utils/auth'
-class LoginForm extends React.Component {
+import { useState } from 'react';
+import { useRouter } from 'next/router';
+import { loginUser } from '../utils/auth';
 
-    
-    state = {
-        email: '',
-        password: ''
-    }
+const LoginForm = () => {
+    const router = useRouter();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
 
-    
-    handleChange = event => {
-        this.setState({ [event.target.name]: event.target.value });
-    }
+    const handleChange = (event) => {
+        if (event.target.name === 'email') {
+            setEmail(event.target.value);
+        } else if (event.target.name === 'password') {
+            setPassword(event.target.value);
+        }
+    };
 
-    handleSubmit = event => {
-        const {email,password} = this.state;
+    const handleSubmit = async (event) => {
         event.preventDefault();
-        loginUser(email,password)
-    }
 
-    render() {
-        return (
-            <form onSubmit={this.handleSubmit}>
-                <div><input type="email" 
-                name="email"
-                placeholder="email"
-                onChange={this.handleChange}/></div>
-                <div><input type="password"
-                name="password"
-                placeholder="password"
-                onChange={this.handleChange} /></div>
-                <button type="submit">Submit</button>
-            </form>
-        )
-    }
-}
+        try {
+            // Wait for the loginUser promise to resolve
+            const token = await loginUser(email, password);
+            if (token) {
+                // Redirect to /home
+                router.push('/home');
+            }
+            else {
+                //if user cant login
+                return
+            }
+
+        } catch (error) {
+            // Handle any errors from loginUser, e.g., display an error message
+            console.error('Login failed:', error);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit}>
+            <div>
+                <input
+                    type="email"
+                    name="email"
+                    placeholder="email"
+                    value={email}
+                    onChange={handleChange}
+                />
+            </div>
+            <div>
+                <input
+                    type="password"
+                    name="password"
+                    placeholder="password"
+                    value={password}
+                    onChange={handleChange}
+                />
+            </div>
+            <button type="submit">Submit</button>
+        </form>
+    );
+};
+
 export default LoginForm;

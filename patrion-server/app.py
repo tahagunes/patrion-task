@@ -25,7 +25,6 @@ mongo = PyMongo(app)
 
 @app.route('/login', methods=['POST'])
 def login_user():
-    print("istek geldi")
     if not request.is_json:
         return jsonify({"msg": "Missing JSON in request"}), 400
         
@@ -83,6 +82,7 @@ def add_post():
 
     current_user = get_jwt_identity()
 
+    print("istek geldi")
 
     if _title and _intro and _body and request.method == 'POST':
 

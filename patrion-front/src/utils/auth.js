@@ -1,7 +1,15 @@
 import axios from 'axios';
-export const loginUser = async (email,password) => {
+import Cookies from 'js-cookie';
+
+export const loginUser = async (email, password) => {
+    console.log("geldi")
+    console.log("bum")
     const pwd = password
-    const {data} = await axios.post('http://localhost:5000/login',{email,pwd});
+    const { data } = await axios.post('http://localhost:5000/login', { email, pwd });
+    if (data.access_token) {  
+        Cookies.set('access_token', data.access_token);      
+    }
+
     //it returns access token if its correct
-    console.log(data);
+    return data.access_token;
 }
