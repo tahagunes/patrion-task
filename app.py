@@ -14,7 +14,7 @@ app = Flask(__name__)
 
 app.secret_key = "secretkey"
 
-app.config['MONGO_URI']= "mongodb://localhost:27017/Users"
+app.config['MONGO_URI']= "mongodb://localhost:27017/PatrionDb"
 app.config['JWT_SECRET_KEY'] = 'patrionTask'
 
 jwt = JWTManager(app)
@@ -39,12 +39,12 @@ def login_user():
     isPasswordCorrect = check_password_hash(db_user['pwd'],_password)
 
     if isPasswordCorrect:
-        access_token = create_access_token(identity=_email)
+        access_token = create_access_token(identity=str(db_user['_id']))
         return jsonify(access_token=access_token), 200
     else:
         return "unauthorized user"
     
-@app.route('/add',methods=['POST'])
+@app.route('/add-user',methods=['POST'])
 def add_user():
     _json = request.json
     _name = _json['name']
@@ -66,30 +66,79 @@ def add_user():
         return not_found()
     
 
+@app.route('/add-post',methods=['POST'])
+@jwt_required()
+def add_post():
+    _json = request.json
+    _title = _json['title']
+    _intro = _json['intro']
+    _body = _json['body']
+
+    current_user = get_jwt_identity()
+
+
+    if _title and _intro and _body and request.method == 'POST':
+
+        id = mongo.db.post.insert_one({'ownerId':current_user,'title':_title,'intro':_intro,'body':_body})
+
+        resp = jsonify("Post added succesfully")
+
+        resp.status_code = 200
+
+        return resp
+    else :
+        return not_found()
+
 @app.route('/users', methods=['GET'])
 @jwt_required()
 def users():    
-    current_user = get_jwt_identity()
-    # return jsonify(logged_in_as=current_user), 200
     users = mongo.db.user.find()
     resp = dumps(users)
-    print(current_user)
     return resp
 
+
+@app.route('/posts', methods=['GET'])
+@jwt_required()
+def posts():    
+    posts = mongo.db.post.find()
+    resp = dumps(posts)
+    return resp
+
+
 @app.route('/users/<id>')
+@jwt_required()
 def user(id):
     user = mongo.db.user.find_one({'_id':ObjectId(id)})
     resp = dumps(user)
     return resp
 
-@app.route('/delete/<id>',methods=['DELETE'])
+
+@app.route('/posts/<id>')
+@jwt_required()
+def post(id):
+    post = mongo.db.post.find_one({'_id':ObjectId(id)})
+    resp = dumps(post)
+    return resp
+
+
+@app.route('/delete-user/<id>',methods=['DELETE'])
+@jwt_required()
 def delete_user(id):
     mongo.db.user.delete_one({'_id':ObjectId(id)})
     resp = jsonify('User deleted successfully!')
     resp.status_code = 200
     return resp
 
-@app.route('/update/<id>',methods=['PUT'])
+@app.route('/delete-post/<id>',methods=['DELETE'])
+@jwt_required()
+def delete_post(id):
+    mongo.db.post.delete_one({'_id':ObjectId(id)})
+    resp = jsonify('Post deleted successfully!')
+    resp.status_code = 200
+    return resp
+
+@app.route('/update-user/<id>',methods=['PUT'])
+@jwt_required()
 def update_user(id):
     _id = id
     _json = request.json
@@ -105,6 +154,27 @@ def update_user(id):
         return resp
     else:
         return not_found()
+
+
+@app.route('/update-post/<id>',methods=['PUT'])
+@jwt_required()
+def update_post(id):
+    _id = id
+    _json = request.json
+    _title = _json['title']
+    _intro = _json['intro']
+    _body = _json['body']
+    current_user = get_jwt_identity()
+
+    if _title and _intro and _body and _id and request.method == 'PUT':
+        mongo.db.post.update_one({'$set':{'title':_title,'intro':_intro,'body':_body}})
+        resp = jsonify("Post update succesfully")
+        resp.status_code = 200
+        return resp
+    else:
+        return not_found()
+
+
 @app.errorhandler(404)
 def not_found(error=None):
     message = {
