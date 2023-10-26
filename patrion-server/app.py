@@ -1,5 +1,7 @@
 from flask import Flask,jsonify, request
 
+from flask_cors import CORS
+
 from flask_pymongo import PyMongo
 
 from bson.json_util import dumps
@@ -11,6 +13,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import (JWTManager, get_jwt_identity, jwt_required, create_access_token)
 
 app = Flask(__name__)
+CORS(app)
 
 app.secret_key = "secretkey"
 
@@ -22,6 +25,7 @@ mongo = PyMongo(app)
 
 @app.route('/login', methods=['POST'])
 def login_user():
+    print("istek geldi")
     if not request.is_json:
         return jsonify({"msg": "Missing JSON in request"}), 400
         
@@ -35,6 +39,9 @@ def login_user():
         return jsonify({"msg": "Missing password parameter"}), 400
 
     db_user = mongo.db.user.find_one({'email':_email})    
+
+    if db_user is None:
+        return "user not found"
 
     isPasswordCorrect = check_password_hash(db_user['pwd'],_password)
 
