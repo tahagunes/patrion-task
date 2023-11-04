@@ -4,6 +4,7 @@ This project is a web application that allows users to register, log in, create 
 Backend (Flask):
 
 -A RESTful API was developed, enabling users to register, log in, create blog posts, and retrieve them.
+
 -User information and blog posts are stored in a MongoDB database.
 -Users are protected with authentication and appropriate methods are used to securely store their passwords.
 
